@@ -1,0 +1,13 @@
+{
+  "step": 6,
+  "stacks": ["python", "node"],
+  "configs": [".pre-commit-config.yaml", ".pre-commit-config-ts.yaml"],
+  "hookType": "combined",
+  "hookPath": ".git/hooks/pre-commit",
+  "installer": "scripts/install-precommit-hooks.sh",
+  "installedAt": "2026-04-12T22:30:00Z",
+  "layerCount": {
+    "python": 11,
+    "typescript": 2
+  }
+}

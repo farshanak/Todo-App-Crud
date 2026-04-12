@@ -1,0 +1,41 @@
+# Pre-commit governance for the Python backend.
+# Multi-stack project: TypeScript hooks live in .pre-commit-config-ts.yaml
+# and the combined runner (scripts/install-precommit-hooks.sh) executes both.
+
+fail_fast: false
+
+repos:
+  # Layer 1-3: File hygiene
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-yaml
+      - id: check-toml
+      - id: check-json
+      - id: check-merge-conflict
+      - id: check-added-large-files
+        args: ['--maxkb=500']
+      - id: detect-private-key
+
+  # Layer 4: Python lint + format (ruff replaces flake8/isort/black for our scope)
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.7.4
+    hooks:
+      - id: ruff
+        files: ^backend/
+        args: [--fix]
+      - id: ruff-format
+        files: ^backend/
+
+  # Layer 5: Branch naming convention
+  - repo: local
+    hooks:
+      - id: branch-name-check
+        name: Branch naming convention
+        entry: bash scripts/check-branch-name.sh
+        language: system
+        always_run: true
+        pass_filenames: false
+        stages: [pre-commit]

@@ -1,0 +1,23 @@
+# Pre-commit governance for the TypeScript frontend.
+# Run via the combined hook installed by scripts/install-precommit-hooks.sh.
+
+fail_fast: false
+
+repos:
+  - repo: local
+    hooks:
+      - id: frontend-typecheck
+        name: TypeScript type check (frontend)
+        entry: bash -c 'cd frontend && npm run typecheck'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [pre-commit]
+
+      - id: frontend-vitest
+        name: Vitest smoke tests (frontend)
+        entry: bash -c 'cd frontend && npm test'
+        language: system
+        files: ^frontend/.*\.(ts|tsx)$
+        pass_filenames: false
+        stages: [pre-commit]
