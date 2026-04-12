@@ -1,0 +1,46 @@
+# Scaffolded by Mault — do not commit
+.claude/hooks/
+
+# Node.js / TypeScript
+node_modules/
+dist/
+build/
+out/
+coverage/
+.nyc_output/
+*.tsbuildinfo
+.eslintcache
+.cache/
+npm-debug.log*
+
+# Python
+.venv/
+venv/
+__pycache__/
+*.py[cod]
+*.so
+*.egg-info/
+.pytest_cache/
+.coverage
+htmlcov/
+.mypy_cache/
+.ipynb_checkpoints/
+
+# Secrets / env
+.env
+.env.*
+*.env
+!.env.example
+credentials.json
+secrets.yaml
+*.pem
+*.key
+*.crt
+
+# Editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+*.log
