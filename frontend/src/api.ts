@@ -1,10 +1,12 @@
+import { env } from "./env";
+
 export interface Todo {
   id: number;
   title: string;
   done: boolean;
 }
 
-const BASE = "http://localhost:8000";
+const BASE = env.API_BASE_URL;
 
 export async function listTodos(): Promise<Todo[]> {
   const res = await fetch(`${BASE}/todos`);
