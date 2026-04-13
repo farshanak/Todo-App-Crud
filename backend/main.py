@@ -1,9 +1,10 @@
-from itertools import count
-
 from config import settings
-from fastapi import FastAPI, HTTPException
+from db import get_session, init_db
+from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
-from pydantic import BaseModel
+from models import Todo as TodoModel
+from pydantic import BaseModel, ConfigDict
+from sqlalchemy.orm import Session
 
 app = FastAPI(title="Todo API")
 
@@ -14,6 +15,10 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+init_db()
+
+DbSession = Depends(get_session)
+
 
 class TodoIn(BaseModel):
     title: str
@@ -23,33 +28,39 @@ class TodoIn(BaseModel):
 class Todo(TodoIn):
     id: int
 
-
-_ids = count(1)
-_todos: dict[int, Todo] = {}
+    model_config = ConfigDict(from_attributes=True)
 
 
 @app.get("/todos", response_model=list[Todo])
-def list_todos():
-    return list(_todos.values())
+def list_todos(session: Session = DbSession):
+    return session.query(TodoModel).order_by(TodoModel.id).all()
 
 
 @app.post("/todos", response_model=Todo, status_code=201)
-def create_todo(payload: TodoIn):
-    todo = Todo(id=next(_ids), **payload.model_dump())
-    _todos[todo.id] = todo
+def create_todo(payload: TodoIn, session: Session = DbSession):
+    todo = TodoModel(title=payload.title, done=payload.done)
+    session.add(todo)
+    session.commit()
+    session.refresh(todo)
     return todo
 
 
 @app.put("/todos/{todo_id}", response_model=Todo)
-def update_todo(todo_id: int, payload: TodoIn):
-    if todo_id not in _todos:
+def update_todo(todo_id: int, payload: TodoIn, session: Session = DbSession):
+    todo = session.get(TodoModel, todo_id)
+    if todo is None:
         raise HTTPException(404, "Todo not found")
-    updated = Todo(id=todo_id, **payload.model_dump())
-    _todos[todo_id] = updated
-    return updated
+    todo.title = payload.title
+    todo.done = payload.done
+    session.commit()
+    session.refresh(todo)
+    return todo
 
 
 @app.delete("/todos/{todo_id}", status_code=204)
-def delete_todo(todo_id: int):
-    if _todos.pop(todo_id, None) is None:
+def delete_todo(todo_id: int, session: Session = DbSession):
+    todo = session.get(TodoModel, todo_id)
+    if todo is None:
         raise HTTPException(404, "Todo not found")
+    session.delete(todo)
+    session.commit()
