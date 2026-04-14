@@ -1,6 +1,11 @@
 import { listTodos, createTodo, updateTodo, deleteTodo, Todo } from "./api";
 import { createEmptyState } from "./empty-state";
+import { toast } from "./toast";
 import "./theme.css";
+
+function errMsg(e: unknown, fallback: string): string {
+  return e instanceof Error && e.message ? e.message : fallback;
+}
 
 const THEME_KEY = "todo-app-theme";
 type Theme = "light" | "dark";
@@ -48,9 +53,15 @@ function render() {
     checkbox.type = "checkbox";
     checkbox.checked = todo.done;
     checkbox.addEventListener("change", async () => {
-      const updated = await updateTodo({ ...todo, done: checkbox.checked });
-      todos = todos.map((t) => (t.id === updated.id ? updated : t));
-      render();
+      try {
+        const updated = await updateTodo({ ...todo, done: checkbox.checked });
+        todos = todos.map((t) => (t.id === updated.id ? updated : t));
+        render();
+        toast.success("Todo updated");
+      } catch (e) {
+        checkbox.checked = todo.done;
+        toast.error(errMsg(e, "Failed to update todo"));
+      }
     });
 
     const label = document.createElement("span");
@@ -60,9 +71,14 @@ function render() {
     const del = document.createElement("button");
     del.textContent = "Delete";
     del.addEventListener("click", async () => {
-      await deleteTodo(todo.id);
-      todos = todos.filter((t) => t.id !== todo.id);
-      render();
+      try {
+        await deleteTodo(todo.id);
+        todos = todos.filter((t) => t.id !== todo.id);
+        render();
+        toast.success("Todo deleted");
+      } catch (e) {
+        toast.error(errMsg(e, "Failed to delete todo"));
+      }
     });
 
     li.append(checkbox, label, del);
@@ -74,10 +90,15 @@ form.addEventListener("submit", async (e) => {
   e.preventDefault();
   const title = input.value.trim();
   if (!title) return;
-  const created = await createTodo(title);
-  todos.push(created);
-  input.value = "";
-  render();
+  try {
+    const created = await createTodo(title);
+    todos.push(created);
+    input.value = "";
+    render();
+    toast.success("Todo added");
+  } catch (err) {
+    toast.error(errMsg(err, "Failed to add todo"));
+  }
 });
 
 (async () => {
