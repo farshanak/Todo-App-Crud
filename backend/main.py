@@ -6,11 +6,13 @@ from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from models import Todo as TodoModel
 from pydantic import BaseModel, ConfigDict, StringConstraints
+from sqlalchemy import text
+from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
 TodoTitle = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
-app = FastAPI(title="Todo API")
+app = FastAPI(title="Todo API", version="0.1.0")
 
 app.add_middleware(
     CORSMiddleware,
@@ -33,6 +35,20 @@ class Todo(TodoIn):
     id: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+@app.get("/health")
+def health():
+    return {"status": "ok", "version": app.version}
+
+
+@app.get("/ready")
+def ready(session: Session = DbSession):
+    try:
+        session.execute(text("SELECT 1"))
+    except OperationalError as exc:
+        raise HTTPException(503, "database unavailable") from exc
+    return {"status": "ready"}
 
 
 @app.get("/todos", response_model=list[Todo])
