@@ -2,7 +2,7 @@ from typing import Annotated
 
 from config import settings
 from db import get_session, init_db
-from fastapi import Depends, FastAPI, HTTPException
+from fastapi import Body, Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from models import Todo as TodoModel
 from pydantic import BaseModel, ConfigDict, StringConstraints
@@ -12,7 +12,19 @@ from sqlalchemy.orm import Session
 
 TodoTitle = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
-app = FastAPI(title="Todo API", version="0.1.0")
+app = FastAPI(
+    title="Todo API",
+    description="Simple CRUD API for managing todos, backed by SQLite.",
+    version="0.1.0",
+    contact={
+        "name": "Todo App",
+        "url": "https://github.com/farshanak/Todo-App-Crud",
+    },
+    openapi_tags=[
+        {"name": "todos", "description": "Create, read, update, and delete todos."},
+        {"name": "health", "description": "Liveness and readiness probes."},
+    ],
+)
 
 app.add_middleware(
     CORSMiddleware,
@@ -24,6 +36,8 @@ app.add_middleware(
 init_db()
 
 DbSession = Depends(get_session)
+CreateBody = Body(..., examples=[{"title": "Buy milk", "done": False}])
+UpdateBody = Body(..., examples=[{"title": "Buy oat milk", "done": True}])
 
 
 class TodoIn(BaseModel):
@@ -37,12 +51,12 @@ class Todo(TodoIn):
     model_config = ConfigDict(from_attributes=True)
 
 
-@app.get("/health")
+@app.get("/health", tags=["health"])
 def health():
     return {"status": "ok", "version": app.version}
 
 
-@app.get("/ready")
+@app.get("/ready", tags=["health"])
 def ready(session: Session = DbSession):
     try:
         session.execute(text("SELECT 1"))
@@ -51,13 +65,16 @@ def ready(session: Session = DbSession):
     return {"status": "ready"}
 
 
-@app.get("/todos", response_model=list[Todo])
+@app.get("/todos", response_model=list[Todo], tags=["todos"])
 def list_todos(session: Session = DbSession):
     return session.query(TodoModel).order_by(TodoModel.id).all()
 
 
-@app.post("/todos", response_model=Todo, status_code=201)
-def create_todo(payload: TodoIn, session: Session = DbSession):
+@app.post("/todos", response_model=Todo, status_code=201, tags=["todos"])
+def create_todo(
+    payload: TodoIn = CreateBody,
+    session: Session = DbSession,
+):
     todo = TodoModel(title=payload.title, done=payload.done)
     session.add(todo)
     session.commit()
@@ -65,8 +82,12 @@ def create_todo(payload: TodoIn, session: Session = DbSession):
     return todo
 
 
-@app.put("/todos/{todo_id}", response_model=Todo)
-def update_todo(todo_id: int, payload: TodoIn, session: Session = DbSession):
+@app.put("/todos/{todo_id}", response_model=Todo, tags=["todos"])
+def update_todo(
+    todo_id: int,
+    payload: TodoIn = UpdateBody,
+    session: Session = DbSession,
+):
     todo = session.get(TodoModel, todo_id)
     if todo is None:
         raise HTTPException(404, "Todo not found")
@@ -77,7 +98,7 @@ def update_todo(todo_id: int, payload: TodoIn, session: Session = DbSession):
     return todo
 
 
-@app.delete("/todos/{todo_id}", status_code=204)
+@app.delete("/todos/{todo_id}", status_code=204, tags=["todos"])
 def delete_todo(todo_id: int, session: Session = DbSession):
     todo = session.get(TodoModel, todo_id)
     if todo is None:
