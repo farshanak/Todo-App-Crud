@@ -1,10 +1,14 @@
+from typing import Annotated
+
 from config import settings
 from db import get_session, init_db
 from fastapi import Depends, FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from models import Todo as TodoModel
-from pydantic import BaseModel, ConfigDict
+from pydantic import BaseModel, ConfigDict, StringConstraints
 from sqlalchemy.orm import Session
+
+TodoTitle = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
 
 app = FastAPI(title="Todo API")
 
@@ -21,7 +25,7 @@ DbSession = Depends(get_session)
 
 
 class TodoIn(BaseModel):
-    title: str
+    title: TodoTitle
     done: bool = False
 
 
