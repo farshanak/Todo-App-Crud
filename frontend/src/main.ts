@@ -1,4 +1,27 @@
 import { listTodos, createTodo, updateTodo, deleteTodo, Todo } from "./api";
+import "./theme.css";
+
+const THEME_KEY = "todo-app-theme";
+type Theme = "light" | "dark";
+
+function applyTheme(theme: Theme): void {
+  document.documentElement.dataset.theme = theme;
+  const btn = document.getElementById("theme-toggle");
+  if (btn) btn.textContent = theme === "dark" ? "☀️" : "🌙";
+}
+
+function initTheme(): void {
+  const stored = localStorage.getItem(THEME_KEY) as Theme | null;
+  const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
+  applyTheme(stored ?? (prefersDark ? "dark" : "light"));
+  document.getElementById("theme-toggle")?.addEventListener("click", () => {
+    const next: Theme = document.documentElement.dataset.theme === "dark" ? "light" : "dark";
+    localStorage.setItem(THEME_KEY, next);
+    applyTheme(next);
+  });
+}
+
+initTheme();
 
 const list = document.getElementById("todo-list") as HTMLUListElement;
 const form = document.getElementById("new-todo-form") as HTMLFormElement;

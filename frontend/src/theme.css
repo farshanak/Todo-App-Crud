@@ -1,0 +1,29 @@
+:root {
+  --bg: #ffffff;
+  --fg: #1a1a1a;
+  --muted: #6b7280;
+  --accent: #4f46e5;
+  --border: #e5e7eb;
+}
+
+:root[data-theme="dark"] {
+  --bg: #0f172a;
+  --fg: #f1f5f9;
+  --muted: #94a3b8;
+  --accent: #818cf8;
+  --border: #1e293b;
+}
+
+body {
+  background: var(--bg);
+  color: var(--fg);
+}
+
+#theme-toggle {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 4px 10px;
+  cursor: pointer;
+}
