@@ -1,4 +1,5 @@
 import { listTodos, createTodo, updateTodo, deleteTodo, Todo } from "./api";
+import { createEmptyState } from "./empty-state";
 import "./theme.css";
 
 const THEME_KEY = "todo-app-theme";
@@ -28,9 +29,18 @@ const form = document.getElementById("new-todo-form") as HTMLFormElement;
 const input = document.getElementById("new-todo-input") as HTMLInputElement;
 
 let todos: Todo[] = [];
+let loading = true;
 
 function render() {
   list.innerHTML = "";
+  if (!loading && todos.length === 0) {
+    const empty = createEmptyState(() => input.focus());
+    const li = document.createElement("li");
+    li.className = "empty-state__wrap";
+    li.append(empty);
+    list.append(li);
+    return;
+  }
   for (const todo of todos) {
     const li = document.createElement("li");
 
@@ -72,5 +82,6 @@ form.addEventListener("submit", async (e) => {
 
 (async () => {
   todos = await listTodos();
+  loading = false;
   render();
 })();
