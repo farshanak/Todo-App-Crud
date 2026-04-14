@@ -42,3 +42,27 @@ def test_update_missing_returns_404(client):
 
 def test_delete_missing_returns_404(client):
     assert client.delete("/todos/999999").status_code == 404
+
+
+class TestEmptyTitleRejected:
+    def test_post_empty_title_returns_422_and_inserts_nothing(self, client):
+        assert client.post("/todos", json={"title": ""}).status_code == 422
+        assert client.get("/todos").json() == []
+
+    def test_post_whitespace_title_returns_422_and_inserts_nothing(self, client):
+        assert client.post("/todos", json={"title": "   "}).status_code == 422
+        assert client.get("/todos").json() == []
+
+    def test_put_empty_title_returns_422_and_preserves_row(self, client):
+        created = client.post("/todos", json={"title": "keep"}).json()
+        assert client.put(
+            f"/todos/{created['id']}", json={"title": "", "done": True}
+        ).status_code == 422
+        current = next(t for t in client.get("/todos").json() if t["id"] == created["id"])
+        assert current == {"id": created["id"], "title": "keep", "done": False}
+
+    def test_put_whitespace_title_returns_422(self, client):
+        created = client.post("/todos", json={"title": "keep"}).json()
+        assert client.put(
+            f"/todos/{created['id']}", json={"title": "   ", "done": False}
+        ).status_code == 422
