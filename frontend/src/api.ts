@@ -4,12 +4,21 @@ export interface Todo {
   id: number;
   title: string;
   done: boolean;
+  created_at: string;
+  updated_at: string;
 }
+
+export type TodoSort = "id" | "created_at" | "updated_at";
+export type TodoOrder = "asc" | "desc";
 
 const BASE = env.API_BASE_URL;
 
-export async function listTodos(): Promise<Todo[]> {
-  const res = await fetch(`${BASE}/todos`);
+export async function listTodos(params?: { sort?: TodoSort; order?: TodoOrder }): Promise<Todo[]> {
+  const qs = new URLSearchParams();
+  if (params?.sort) qs.set("sort", params.sort);
+  if (params?.order) qs.set("order", params.order);
+  const suffix = qs.toString() ? `?${qs.toString()}` : "";
+  const res = await fetch(`${BASE}/todos${suffix}`);
   if (!res.ok) throw new Error("Failed to load todos");
   return res.json();
 }

@@ -9,6 +9,8 @@ import {
 import { createCheatsheet } from "./components/Cheatsheet/Cheatsheet";
 import { createConfirmModal } from "./components/ConfirmModal/ConfirmModal";
 import { createTodoListSkeleton } from "./components/TodoListSkeleton/TodoListSkeleton";
+import { createSortMenu, type SortValue } from "./components/SortMenu/SortMenu";
+import { createTodoItem } from "./components/TodoItem/TodoItem";
 import "./theme.css";
 import "./styles/skeleton.css";
 import "./components/ConfirmModal/ConfirmModal.css";
@@ -46,6 +48,7 @@ const input = document.getElementById("new-todo-input") as HTMLInputElement;
 let todos: Todo[] = [];
 let loading = true;
 let selectedIndex = 0;
+let currentSort: SortValue = { sort: "created_at", order: "desc" };
 
 function moveSelection(delta: number): void {
   if (todos.length === 0) return;
@@ -72,51 +75,52 @@ function render() {
     return;
   }
   for (const todo of todos) {
-    const li = document.createElement("li");
-
-    const checkbox = document.createElement("input");
-    checkbox.type = "checkbox";
-    checkbox.checked = todo.done;
-    checkbox.addEventListener("change", async () => {
-      try {
-        const updated = await updateTodo({ ...todo, done: checkbox.checked });
-        todos = todos.map((t) => (t.id === updated.id ? updated : t));
-        render();
-        toast.success("Todo updated");
-      } catch (e) {
-        checkbox.checked = todo.done;
-        toast.error(errMsg(e, "Failed to update todo"));
-      }
+    const li = createTodoItem({
+      todo,
+      selected: todo === todos[selectedIndex],
+      onToggle: async (checked) => {
+        try {
+          const updated = await updateTodo({ ...todo, done: checked });
+          todos = todos.map((t) => (t.id === updated.id ? updated : t));
+          render();
+          toast.success("Todo updated");
+        } catch (e) {
+          toast.error(errMsg(e, "Failed to update todo"));
+          render();
+        }
+      },
+      onDelete: async () => {
+        const ok = await confirmModal.confirm({
+          title: "Delete todo?",
+          message: `Delete "${todo.title}"? This cannot be undone.`,
+          confirmLabel: "Delete",
+          danger: true,
+        });
+        if (!ok) return;
+        try {
+          await deleteTodo(todo.id);
+          todos = todos.filter((t) => t.id !== todo.id);
+          render();
+          toast.success("Todo deleted");
+        } catch (e) {
+          toast.error(errMsg(e, "Failed to delete todo"));
+        }
+      },
     });
-
-    const label = document.createElement("span");
-    label.textContent = todo.title;
-    if (todo.done) label.style.textDecoration = "line-through";
-
-    const del = document.createElement("button");
-    del.textContent = "Delete";
-    del.addEventListener("click", async () => {
-      const ok = await confirmModal.confirm({
-        title: "Delete todo?",
-        message: `Delete "${todo.title}"? This cannot be undone.`,
-        confirmLabel: "Delete",
-        danger: true,
-      });
-      if (!ok) return;
-      try {
-        await deleteTodo(todo.id);
-        todos = todos.filter((t) => t.id !== todo.id);
-        render();
-        toast.success("Todo deleted");
-      } catch (e) {
-        toast.error(errMsg(e, "Failed to delete todo"));
-      }
-    });
-
-    li.append(checkbox, label, del);
-    if (todo === todos[selectedIndex]) li.classList.add("todo-selected");
     list.append(li);
   }
+}
+
+async function reloadTodos(): Promise<void> {
+  loading = true;
+  render();
+  try {
+    todos = await listTodos(currentSort);
+  } catch (e) {
+    toast.error(errMsg(e, "Failed to load todos"));
+  }
+  loading = false;
+  render();
 }
 
 form.addEventListener("submit", async (e) => {
@@ -150,9 +154,14 @@ const confirmModal = createConfirmModal();
 document.body.appendChild(confirmModal.element);
 useKeyboardShortcuts(shortcuts);
 
+const sortMenu = createSortMenu({
+  onChange: (value) => {
+    currentSort = value;
+    void reloadTodos();
+  },
+});
+const toolbar = document.getElementById("todo-toolbar");
+(toolbar ?? form).append(sortMenu.element);
+
 render();
-(async () => {
-  todos = await listTodos();
-  loading = false;
-  render();
-})();
+void reloadTodos();
