@@ -7,9 +7,11 @@ import {
   type ShortcutBinding,
 } from "./hooks/useKeyboardShortcuts";
 import { createCheatsheet } from "./components/Cheatsheet/Cheatsheet";
+import { createConfirmModal } from "./components/ConfirmModal/ConfirmModal";
 import { createTodoListSkeleton } from "./components/TodoListSkeleton/TodoListSkeleton";
 import "./theme.css";
 import "./styles/skeleton.css";
+import "./components/ConfirmModal/ConfirmModal.css";
 
 function errMsg(e: unknown, fallback: string): string {
   return e instanceof Error && e.message ? e.message : fallback;
@@ -94,6 +96,13 @@ function render() {
     const del = document.createElement("button");
     del.textContent = "Delete";
     del.addEventListener("click", async () => {
+      const ok = await confirmModal.confirm({
+        title: "Delete todo?",
+        message: `Delete "${todo.title}"? This cannot be undone.`,
+        confirmLabel: "Delete",
+        danger: true,
+      });
+      if (!ok) return;
       try {
         await deleteTodo(todo.id);
         todos = todos.filter((t) => t.id !== todo.id);
@@ -137,6 +146,8 @@ const shortcuts: ShortcutBinding[] = [
 
 const cheatsheet = createCheatsheet(shortcuts);
 document.body.appendChild(cheatsheet.element);
+const confirmModal = createConfirmModal();
+document.body.appendChild(confirmModal.element);
 useKeyboardShortcuts(shortcuts);
 
 render();
