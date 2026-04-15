@@ -27,3 +27,8 @@ class Todo(Base):
         server_default=func.now(),
         onupdate=func.now(),
     )
+    archived_at: Mapped[datetime | None] = mapped_column(
+        DateTime,
+        nullable=True,
+        default=None,
+    )
