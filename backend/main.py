@@ -3,8 +3,10 @@ from typing import Annotated, Literal
 
 from config import settings
 from db import get_session, init_db
+from exporters.csv_exporter import stream_todos_csv
 from fastapi import Body, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import StreamingResponse
 from models import Todo as TodoModel
 from pydantic import BaseModel, ConfigDict, StringConstraints
 from sqlalchemy import func, text
@@ -98,6 +100,21 @@ def list_todos(
     else:
         query = query.filter(TodoModel.archived_at.is_(None))
     return query.order_by(direction, TodoModel.id).all()
+
+
+@app.get("/todos/export.csv", tags=["todos"])
+def export_todos_csv(session: Session = DbSession):
+    todos = (
+        session.query(TodoModel)
+        .filter(TodoModel.archived_at.is_(None))
+        .order_by(TodoModel.position, TodoModel.id)
+        .all()
+    )
+    return StreamingResponse(
+        stream_todos_csv(todos),
+        media_type="text/csv",
+        headers={"Content-Disposition": 'attachment; filename="todos.csv"'},
+    )
 
 
 @app.post("/todos/{todo_id}/archive", response_model=Todo, tags=["todos"])
