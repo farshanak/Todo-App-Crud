@@ -60,6 +60,11 @@ Dockerfile*
 docker-compose*
 .docker
 
+# Runtime data (SQLite lives in a named volume at runtime)
+data
+*.db
+*.sqlite
+
 # Mault tooling
 .mault
 .claude

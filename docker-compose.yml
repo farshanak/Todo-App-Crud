@@ -2,22 +2,20 @@ services:
   backend:
     build:
       context: .
-      dockerfile: backend/Dockerfile
-      target: development
+      dockerfile: Dockerfile
+      target: production
     container_name: todo_backend
     ports:
       - "${BACKEND_PORT:-8000}:8000"
     volumes:
-      - ./backend:/app/backend
-    env_file:
-      - .env
+      - todo_data:/app/data
     environment:
-      - BACKEND_HOST=0.0.0.0
-      - BACKEND_PORT=8000
+      DATABASE_URL: sqlite:////app/data/todos.db
+      CORS_ORIGINS: "http://localhost:8080"
     healthcheck:
-      test: ["CMD", "curl", "-f", "http://localhost:8000/todos"]
+      test: ["CMD", "curl", "-fsS", "http://localhost:8000/health"]
       interval: 30s
-      timeout: 10s
+      timeout: 5s
       retries: 3
       start_period: 10s
     restart: unless-stopped
@@ -26,23 +24,16 @@ services:
     build:
       context: .
       dockerfile: frontend/Dockerfile
-      target: development
+      target: production
+      args:
+        VITE_API_BASE_URL: "${VITE_API_BASE_URL:-http://localhost:8000}"
     container_name: todo_frontend
     ports:
-      - "5173:5173"
-    volumes:
-      - ./frontend:/app
-      - /app/node_modules
-      - ./.env:/.env:ro
-    env_file:
-      - .env
-    healthcheck:
-      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:5173/"]
-      interval: 30s
-      timeout: 10s
-      retries: 3
-      start_period: 15s
-    restart: unless-stopped
+      - "8080:8080"
     depends_on:
       backend:
         condition: service_healthy
+    restart: unless-stopped
+
+volumes:
+  todo_data:
