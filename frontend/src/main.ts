@@ -7,7 +7,9 @@ import {
   type ShortcutBinding,
 } from "./hooks/useKeyboardShortcuts";
 import { createCheatsheet } from "./components/Cheatsheet/Cheatsheet";
+import { createTodoListSkeleton } from "./components/TodoListSkeleton/TodoListSkeleton";
 import "./theme.css";
+import "./styles/skeleton.css";
 
 function errMsg(e: unknown, fallback: string): string {
   return e instanceof Error && e.message ? e.message : fallback;
@@ -51,7 +53,15 @@ function moveSelection(delta: number): void {
 
 function render() {
   list.innerHTML = "";
-  if (!loading && todos.length === 0) {
+  if (loading) {
+    const skeleton = createTodoListSkeleton(5);
+    const li = document.createElement("li");
+    li.className = "todo-skeleton__wrap";
+    li.append(skeleton);
+    list.append(li);
+    return;
+  }
+  if (todos.length === 0) {
     const empty = createEmptyState(() => input.focus());
     const li = document.createElement("li");
     li.className = "empty-state__wrap";
@@ -129,6 +139,7 @@ const cheatsheet = createCheatsheet(shortcuts);
 document.body.appendChild(cheatsheet.element);
 useKeyboardShortcuts(shortcuts);
 
+render();
 (async () => {
   todos = await listTodos();
   loading = false;

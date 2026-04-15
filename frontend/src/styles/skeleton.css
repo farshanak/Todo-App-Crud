@@ -1,0 +1,36 @@
+.todo-skeleton {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+}
+.todo-skeleton__row {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.75rem;
+  border-radius: 6px;
+  background: var(--surface, #f4f4f5);
+}
+.todo-skeleton__box,
+.todo-skeleton__bar {
+  display: inline-block;
+  border-radius: 4px;
+  background: linear-gradient(90deg, rgba(0,0,0,.06), rgba(0,0,0,.14), rgba(0,0,0,.06));
+  background-size: 200% 100%;
+  animation: todo-skeleton-shimmer 1.2s ease-in-out infinite;
+}
+.todo-skeleton__box { width: 1.1rem; height: 1.1rem; flex: 0 0 auto; }
+.todo-skeleton__bar { height: 0.9rem; flex: 1 1 auto; }
+@keyframes todo-skeleton-shimmer {
+  0% { background-position: 200% 0; }
+  100% { background-position: -200% 0; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .todo-skeleton__box,
+  .todo-skeleton__bar { animation: none; background: rgba(0,0,0,.1); }
+}
+.todo-skeleton--reduced .todo-skeleton__box,
+.todo-skeleton--reduced .todo-skeleton__bar { animation: none; background: rgba(0,0,0,.1); }
