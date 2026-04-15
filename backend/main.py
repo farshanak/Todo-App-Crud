@@ -1,4 +1,4 @@
-from datetime import datetime
+from datetime import UTC, datetime
 from typing import Annotated, Literal
 
 from config import settings
@@ -55,6 +55,7 @@ class Todo(TodoIn):
     id: int
     created_at: datetime
     updated_at: datetime
+    archived_at: datetime | None = None
 
     model_config = ConfigDict(from_attributes=True)
 
@@ -73,15 +74,46 @@ def ready(session: Session = DbSession):
     return {"status": "ready"}
 
 
+ArchivedQuery = Query(False)
+
+
 @app.get("/todos", response_model=list[Todo], tags=["todos"])
 def list_todos(
     session: Session = DbSession,
     sort: SortField = SortQuery,
     order: SortOrder = OrderQuery,
+    archived: bool = ArchivedQuery,
 ):
     column = getattr(TodoModel, sort)
     direction = column.desc() if order == "desc" else column.asc()
-    return session.query(TodoModel).order_by(direction, TodoModel.id).all()
+    query = session.query(TodoModel)
+    if archived:
+        query = query.filter(TodoModel.archived_at.is_not(None))
+    else:
+        query = query.filter(TodoModel.archived_at.is_(None))
+    return query.order_by(direction, TodoModel.id).all()
+
+
+@app.post("/todos/{todo_id}/archive", response_model=Todo, tags=["todos"])
+def archive_todo(todo_id: int, session: Session = DbSession):
+    todo = session.get(TodoModel, todo_id)
+    if todo is None:
+        raise HTTPException(404, "Todo not found")
+    todo.archived_at = datetime.now(UTC).replace(tzinfo=None)
+    session.commit()
+    session.refresh(todo)
+    return todo
+
+
+@app.post("/todos/{todo_id}/restore", response_model=Todo, tags=["todos"])
+def restore_todo(todo_id: int, session: Session = DbSession):
+    todo = session.get(TodoModel, todo_id)
+    if todo is None:
+        raise HTTPException(404, "Todo not found")
+    todo.archived_at = None
+    session.commit()
+    session.refresh(todo)
+    return todo
 
 
 @app.post("/todos", response_model=Todo, status_code=201, tags=["todos"])
