@@ -32,3 +32,4 @@ class Todo(Base):
         nullable=True,
         default=None,
     )
+    position: Mapped[int] = mapped_column(Integer, nullable=False, default=0)

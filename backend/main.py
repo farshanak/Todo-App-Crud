@@ -7,11 +7,11 @@ from fastapi import Body, Depends, FastAPI, HTTPException, Query
 from fastapi.middleware.cors import CORSMiddleware
 from models import Todo as TodoModel
 from pydantic import BaseModel, ConfigDict, StringConstraints
-from sqlalchemy import text
+from sqlalchemy import func, text
 from sqlalchemy.exc import OperationalError
 from sqlalchemy.orm import Session
 
-SortField = Literal["id", "created_at", "updated_at"]
+SortField = Literal["position", "id", "created_at", "updated_at"]
 SortOrder = Literal["asc", "desc"]
 
 TodoTitle = Annotated[str, StringConstraints(strip_whitespace=True, min_length=1)]
@@ -42,7 +42,8 @@ init_db()
 DbSession = Depends(get_session)
 CreateBody = Body(..., examples=[{"title": "Buy milk", "done": False}])
 UpdateBody = Body(..., examples=[{"title": "Buy oat milk", "done": True}])
-SortQuery = Query("id")
+ReorderBody = Body(..., examples=[{"ids": [3, 1, 2]}])
+SortQuery = Query("position")
 OrderQuery = Query("asc")
 
 
@@ -56,8 +57,13 @@ class Todo(TodoIn):
     created_at: datetime
     updated_at: datetime
     archived_at: datetime | None = None
+    position: int
 
     model_config = ConfigDict(from_attributes=True)
+
+
+class ReorderIn(BaseModel):
+    ids: list[int]
 
 
 @app.get("/health", tags=["health"])
@@ -121,11 +127,30 @@ def create_todo(
     payload: TodoIn = CreateBody,
     session: Session = DbSession,
 ):
-    todo = TodoModel(title=payload.title, done=payload.done)
+    next_position = (session.query(func.max(TodoModel.position)).scalar() or -1) + 1
+    todo = TodoModel(title=payload.title, done=payload.done, position=next_position)
     session.add(todo)
     session.commit()
     session.refresh(todo)
     return todo
+
+
+@app.put("/todos/reorder", tags=["todos"])
+def reorder_todos(
+    payload: ReorderIn = ReorderBody,
+    session: Session = DbSession,
+):
+    requested = payload.ids
+    if len(set(requested)) != len(requested):
+        raise HTTPException(400, "Duplicate ids in reorder payload")
+    existing = {row.id for row in session.query(TodoModel.id).all()}
+    if set(requested) != existing:
+        raise HTTPException(400, "Reorder ids must match all existing todos")
+    todos = {t.id: t for t in session.query(TodoModel).all()}
+    for index, todo_id in enumerate(requested):
+        todos[todo_id].position = index
+    session.commit()
+    return {"status": "ok", "count": len(requested)}
 
 
 @app.put("/todos/{todo_id}", response_model=Todo, tags=["todos"])
