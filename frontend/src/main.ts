@@ -1,6 +1,12 @@
 import { listTodos, createTodo, updateTodo, deleteTodo, Todo } from "./api";
 import { createEmptyState } from "./empty-state";
 import { toast } from "./toast";
+import {
+  useKeyboardShortcuts,
+  SHORTCUT_KEYS,
+  type ShortcutBinding,
+} from "./hooks/useKeyboardShortcuts";
+import { createCheatsheet } from "./components/Cheatsheet/Cheatsheet";
 import "./theme.css";
 
 function errMsg(e: unknown, fallback: string): string {
@@ -35,6 +41,13 @@ const input = document.getElementById("new-todo-input") as HTMLInputElement;
 
 let todos: Todo[] = [];
 let loading = true;
+let selectedIndex = 0;
+
+function moveSelection(delta: number): void {
+  if (todos.length === 0) return;
+  selectedIndex = Math.max(0, Math.min(todos.length - 1, selectedIndex + delta));
+  render();
+}
 
 function render() {
   list.innerHTML = "";
@@ -82,6 +95,7 @@ function render() {
     });
 
     li.append(checkbox, label, del);
+    if (todo === todos[selectedIndex]) li.classList.add("todo-selected");
     list.append(li);
   }
 }
@@ -100,6 +114,20 @@ form.addEventListener("submit", async (e) => {
     toast.error(errMsg(err, "Failed to add todo"));
   }
 });
+
+const shortcuts: ShortcutBinding[] = [
+  { key: SHORTCUT_KEYS.NEW, description: "New todo", handler: () => input.focus() },
+  { key: SHORTCUT_KEYS.SEARCH, description: "Focus search",
+    handler: () => (document.getElementById("search-input") as HTMLInputElement | null)?.focus() ?? input.focus() },
+  { key: SHORTCUT_KEYS.NEXT, description: "Next todo", handler: () => moveSelection(1) },
+  { key: SHORTCUT_KEYS.PREV, description: "Previous todo", handler: () => moveSelection(-1) },
+  { key: SHORTCUT_KEYS.HELP, description: "Show shortcuts", handler: () => cheatsheet.toggle() },
+  { key: SHORTCUT_KEYS.CLOSE, description: "Close dialog", handler: () => cheatsheet.close() },
+];
+
+const cheatsheet = createCheatsheet(shortcuts);
+document.body.appendChild(cheatsheet.element);
+useKeyboardShortcuts(shortcuts);
 
 (async () => {
   todos = await listTodos();
