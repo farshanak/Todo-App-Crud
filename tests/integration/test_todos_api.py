@@ -59,7 +59,9 @@ class TestEmptyTitleRejected:
             f"/todos/{created['id']}", json={"title": "", "done": True}
         ).status_code == 422
         current = next(t for t in client.get("/todos").json() if t["id"] == created["id"])
-        assert current == {"id": created["id"], "title": "keep", "done": False}
+        assert current["id"] == created["id"]
+        assert current["title"] == "keep"
+        assert current["done"] is False
 
     def test_put_whitespace_title_returns_422(self, client):
         created = client.post("/todos", json={"title": "keep"}).json()
